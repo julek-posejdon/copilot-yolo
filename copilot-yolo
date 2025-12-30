@@ -20,9 +20,10 @@ GREEN='\033[1;32m'
 RESET='\033[0m'
 
 if [[ "$1" == "--help" ]]; then
-  echo "Usage: copilot-yolo [--enable-network] [--model MODEL] <prompt>"
+  echo "Usage: copilot-yolo [--enable-network] [--model MODEL] [--skip-backup] <prompt>"
   echo "  --enable-network   Allow copilot to access all URLs (sets --allow-all-urls)"
   echo "  --model MODEL      Use specified model (default: gpt-4.1)"
+  echo "  --skip-backup      Skip backup before running copilot"
   echo "  <prompt>           Prompt to pass to copilot (required)"
   exit 0
 fi
