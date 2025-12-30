@@ -13,6 +13,12 @@ ALLOW_ALL_URLS=0
 MODEL="gpt-4.1"
 SKIP_BACKUP=0
 
+# Print resource usage info
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+GREEN='\033[1;32m'
+RESET='\033[0m'
+
 if [[ "$1" == "--help" ]]; then
   echo "Usage: copilot-yolo [--enable-network] [--model MODEL] <prompt>"
   echo "  --enable-network   Allow copilot to access all URLs (sets --allow-all-urls)"
@@ -67,12 +73,6 @@ fi
 MEM_KB=$(grep MemTotal /proc/meminfo | tr -dc '0-9')
 MEM_LIMIT="$((MEM_KB / 2 / 1024))m"
 CPU_LIMIT=$(($(nproc) > 2 ? $(nproc) - 2 : 1))
-
-# Print resource usage info
-YELLOW='\033[1;33m'
-CYAN='\033[1;36m'
-GREEN='\033[1;32m'
-RESET='\033[0m'
 
 printf "${YELLOW}[copilot-yolo]${RESET} Memory limit: ${CYAN}%s${RESET} (half of host RAM)\n" "$MEM_LIMIT"
 printf "${YELLOW}[copilot-yolo]${RESET} CPU limit:   ${CYAN}%s${RESET} (host cores minus two)\n" "$CPU_LIMIT"
