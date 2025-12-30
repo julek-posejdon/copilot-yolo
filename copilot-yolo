@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# Run copilot with full permissions inside a stock Ubuntu container
+
+set -e
+
+IMAGE=ubuntu:latest
+HOST_PWD="$(pwd)"
+
+# Run the container
+# Parse options
+ALLOW_ALL_URLS=0
+MODEL="gpt-4.1"
+SKIP_BACKUP=0
+
+if [[ "$1" == "--help" ]]; then
+  echo "Usage: copilot-yolo [--enable-network] [--model MODEL] <prompt>"
+  echo "  --enable-network   Allow copilot to access all URLs (sets --allow-all-urls)"
+  echo "  --model MODEL      Use specified model (default: gpt-4.1)"
+  echo "  <prompt>           Prompt to pass to copilot (required)"
+  exit 0
+fi
+
+while [[ "$1" == --* ]]; do
+  case "$1" in
+    --enable-network)
+      ALLOW_ALL_URLS=1
+      shift
+      ;;
+    --model)
+      MODEL="$2"
+      shift 2
+      ;;
+    --skip-backup)
+      SKIP_BACKUP=1
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+PROMPT="$1"
+shift
+
+if [[ -z "$PROMPT" ]]; then
+  echo "Error: Missing prompt argument." >&2
+  echo "Try: copilot-yolo --help" >&2
+  exit 1
+fi
+
+if [[ $# -ne 0 ]]; then
+  echo "Error: Unexpected extra arguments: $*" >&2
+  echo "Try: copilot-yolo --help" >&2
+  exit 1
+fi
+
+if [[ $SKIP_BACKUP -eq 0 ]]; then
+  BACKUP_FILE="$(mktemp --suffix=.tar.gz /tmp/copilot-yolo-backup-XXXXXX)"
+  tar czf "$BACKUP_FILE" .
+  echo -e "${YELLOW}[copilot-yolo]${RESET} Backup of current directory created at: ${CYAN}$BACKUP_FILE${RESET}"
+fi
+
+MEM_KB=$(grep MemTotal /proc/meminfo | tr -dc '0-9')
+MEM_LIMIT="$((MEM_KB / 2 / 1024))m"
+CPU_LIMIT=$(($(nproc) > 2 ? $(nproc) - 2 : 1))
+
+# Print resource usage info
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+GREEN='\033[1;32m'
+RESET='\033[0m'
+
+printf "${YELLOW}[copilot-yolo]${RESET} Memory limit: ${CYAN}%s${RESET} (half of host RAM)\n" "$MEM_LIMIT"
+printf "${YELLOW}[copilot-yolo]${RESET} CPU limit:   ${CYAN}%s${RESET} (host cores minus two)\n" "$CPU_LIMIT"
+if [[ $ALLOW_ALL_URLS -eq 1 ]]; then
+  printf "${YELLOW}[copilot-yolo]${RESET} Network:     ${CYAN}enabled${RESET}\n"
+  URL_ARG="--allow-all-urls"
+else
+  printf "${YELLOW}[copilot-yolo]${RESET} Network:     ${GREEN}disabled${RESET}\n"
+  URL_ARG="--deny-url"
+fi
+printf "${YELLOW}[copilot-yolo]${RESET} Launching container...\n"
+
+exec docker run --rm \
+  --memory $MEM_LIMIT \
+  --cpus $CPU_LIMIT \
+  -v /usr:/usr:ro \
+  -v /bin:/bin:ro \
+  -v /sbin:/sbin:ro \
+  -v /etc:/etc:ro \
+  -v "$HOME/.copilot:$HOME/.copilot" \
+  -v "$HOME/.cache:$HOME/.cache" \
+  -v "$HOME/.local:$HOME/.local" \
+  -v "$HOST_PWD":"$HOST_PWD" \
+  -w "$HOST_PWD" \
+  -u $(id -u):$(id -g) \
+  -e PATH="$PATH" \
+  -e LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  -e HOME="$HOME" \
+  -e GITHUB_TOKEN="$(gh auth token 2>/dev/null)" \
+  $IMAGE copilot \
+    --prompt "$PROMPT" \
+    --allow-all-paths \
+    --allow-all-tools \
+    $URL_ARG \
+    --model "$MODEL" \
+    --no-auto-update
