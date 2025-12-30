@@ -58,7 +58,8 @@ if [[ $# -ne 0 ]]; then
 fi
 
 if [[ $SKIP_BACKUP -eq 0 ]]; then
-  BACKUP_FILE="$(mktemp --suffix=.tar.gz /tmp/copilot-yolo-backup-XXXXXX)"
+  DIR_NAME="$(basename "$HOST_PWD")"
+  BACKUP_FILE="$(mktemp --suffix=.tar.gz "/tmp/copilot-yolo-backup-${DIR_NAME}-XXXXXX")"
   tar czf "$BACKUP_FILE" .
   echo -e "${YELLOW}[copilot-yolo]${RESET} Backup of current directory created at: ${CYAN}$BACKUP_FILE${RESET}"
 fi
