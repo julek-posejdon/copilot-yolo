@@ -5,6 +5,7 @@
 When introducing new options to copilot-yolo:
 - Update the help dialog in `copilot-yolo` to document the new options.
 - Add the new options to the completions list in `copilot-yolo.bash-completion` for shell autocompletion support.
+- Ensure the `README.md` is synced with any feature changes.
 
 ## Existing Files
 - LICENSE: Contains the GNU Affero General Public License v3.
