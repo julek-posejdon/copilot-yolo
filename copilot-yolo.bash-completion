@@ -1,0 +1,25 @@
+# Bash completion for copilot-yolo
+_copilot_yolo_completions()
+{
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="--enable-network --model --skip-backup --allow-git --help"
+
+    echo "cur: $cur, prev: $prev" >> /tmp/copilot-yolo-completion.log
+    echo "COMP_WORDS: ${COMP_WORDS[@]}, COMP_CWORD: $COMP_CWORD" >> /tmp/copilot-yolo-completion.log
+
+    # Complete options
+    if [[ -z ${cur} || ${cur} == --* ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+        return 0
+    fi
+
+    # Complete model names after --model
+    if [[ ${prev} == --model ]] ; then
+        COMPREPLY=( $(compgen -W "gpt-4.1 gpt-4 gpt-3.5" -- ${cur}) )
+        return 0
+    fi
+}
+complete -F _copilot_yolo_completions copilot-yolo
