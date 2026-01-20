@@ -5,7 +5,7 @@ _copilot_yolo_completions()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="--enable-network --model --skip-backup --allow-git --help"
+    opts="--enable-network --model --skip-backup --allow-git --add-dir --help"
 
     echo "cur: $cur, prev: $prev" >> /tmp/copilot-yolo-completion.log
     echo "COMP_WORDS: ${COMP_WORDS[@]}, COMP_CWORD: $COMP_CWORD" >> /tmp/copilot-yolo-completion.log
@@ -19,6 +19,12 @@ _copilot_yolo_completions()
     # Complete model names after --model
     if [[ ${prev} == --model ]] ; then
         COMPREPLY=( $(compgen -W "gpt-4.1 gpt-4 gpt-3.5" -- ${cur}) )
+        return 0
+    fi
+
+    # Complete directory names after --add-dir
+    if [[ ${prev} == --add-dir ]] ; then
+        COMPREPLY=( $(compgen -d -- ${cur}) )
         return 0
     fi
 }

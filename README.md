@@ -5,9 +5,10 @@ copilot-yolo is a Bash script for running GitHub Copilot with full permissions i
 ## Features
 
 - Run Copilot in a secure, isolated Ubuntu container
-- Options: `--enable-network`, `--model`, `--skip-backup`, `--allow-git`
+- Options: `--enable-network`, `--model`, `--skip-backup`, `--allow-git`, `--add-dir`
 - Automatic backup of your project directory (unless skipped)
 - Smart handling of `.git` directory permissions
+- Mount additional directories with the same security controls
 - Bash completion for all options and model names
 
 ## Files
@@ -20,7 +21,15 @@ copilot-yolo is a Bash script for running GitHub Copilot with full permissions i
 ## Usage
 
 ```bash
-./copilot-yolo [--enable-network] [--model MODEL] [--skip-backup] [--allow-git] [<prompt>]
+./copilot-yolo [--enable-network] [--model MODEL] [--skip-backup] [--allow-git] [--add-dir DIR] [<prompt>]
 ```
 
 Run with `--help` for details on all options.
+
+### Options
+
+- `--enable-network`: Allow copilot to access all URLs
+- `--model MODEL`: Specify the AI model (default: gpt-4.1)
+- `--skip-backup`: Skip backup before running copilot
+- `--allow-git`: Allow writing to `.git` directory
+- `--add-dir DIR`: Mount additional directory (can be specified multiple times)

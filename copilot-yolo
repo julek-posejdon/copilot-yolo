@@ -14,6 +14,7 @@ MODEL="gpt-4.1"
 SKIP_BACKUP=0
 ALLOW_GIT=0
 GIT_PRESENT=0
+ADDITIONAL_DIRS=()
 
 INTERACTIVE=0
 
@@ -24,11 +25,12 @@ GREEN='\033[1;32m'
 RESET='\033[0m'
 
 if [[ "$1" == "--help" ]]; then
-  echo "Usage: copilot-yolo [--enable-network] [--model MODEL] [--skip-backup] [--allow-git] [<prompt>]"
+  echo "Usage: copilot-yolo [--enable-network] [--model MODEL] [--skip-backup] [--allow-git] [--add-dir DIR] [<prompt>]"
   echo "  --enable-network   Allow copilot to access all URLs (sets --allow-all-urls)"
   echo "  --model MODEL      Use specified model (default: gpt-4.1)"
   echo "  --skip-backup      Skip backup before running copilot"
   echo "  --allow-git        Allow writing to .git directory (do not mount as read-only)"
+  echo "  --add-dir DIR      Mount additional directory (can be specified multiple times)"
   echo "  <prompt>           Prompt to pass to copilot. If omitted, starts an interactive session."
   exit 0
 fi
@@ -50,6 +52,10 @@ while [[ "$1" == --* ]]; do
     --allow-git)
       ALLOW_GIT=1
       shift
+      ;;
+    --add-dir)
+      ADDITIONAL_DIRS+=("$2")
+      shift 2
       ;;
     *)
       echo "Unknown option: $1" >&2
@@ -87,6 +93,16 @@ if [[ $SKIP_BACKUP -eq 0 ]]; then
   BACKUP_FILE="$(mktemp --suffix=.tar.gz "/tmp/copilot-yolo-backup-${DIR_NAME}-XXXXXX")"
   tar czf "$BACKUP_FILE" .
   echo -e "${YELLOW}[copilot-yolo]${RESET} Backup of current directory created at: ${CYAN}$BACKUP_FILE${RESET}"
+  
+  # Backup additional directories
+  for dir in "${ADDITIONAL_DIRS[@]}"; do
+    if [[ -d "$dir" ]]; then
+      DIR_NAME="$(basename "$dir")"
+      BACKUP_FILE="$(mktemp --suffix=.tar.gz "/tmp/copilot-yolo-backup-${DIR_NAME}-XXXXXX")"
+      tar czf "$BACKUP_FILE" -C "$(dirname "$dir")" "$(basename "$dir")"
+      echo -e "${YELLOW}[copilot-yolo]${RESET} Backup of $dir created at: ${CYAN}$BACKUP_FILE${RESET}"
+    fi
+  done
 fi
 
 MEM_KB=$(grep MemTotal /proc/meminfo | tr -dc '0-9')
@@ -119,6 +135,25 @@ DOCKER_VOLUMES=(
 if [[ $GIT_PRESENT -eq 1 && $ALLOW_GIT -eq 0 ]]; then
   DOCKER_VOLUMES+=(-v "$HOST_PWD/.git":"$HOST_PWD/.git":ro)
 fi
+
+# Mount additional directories and collect their absolute paths
+ABS_ADDITIONAL_DIRS=()
+for dir in "${ADDITIONAL_DIRS[@]}"; do
+  if [[ ! -d "$dir" ]]; then
+    echo -e "${YELLOW}[copilot-yolo]${RESET} Warning: Directory $dir does not exist, skipping mount" >&2
+    continue
+  fi
+  
+  # Convert to absolute path
+  abs_dir="$(cd "$dir" && pwd)"
+  ABS_ADDITIONAL_DIRS+=("$abs_dir")
+  DOCKER_VOLUMES+=(-v "$abs_dir":"$abs_dir":rw)
+  
+  # If the additional directory has .git and not allowing git, mount .git as read-only
+  if [[ -d "$abs_dir/.git" && $ALLOW_GIT -eq 0 ]]; then
+    DOCKER_VOLUMES+=(-v "$abs_dir/.git":"$abs_dir/.git":ro)
+  fi
+done
 
 # Build copilot arguments
 COPILOT_ARGS=(--allow-all-paths --allow-all-tools $URL_ARG --model "$MODEL" --no-auto-update)
