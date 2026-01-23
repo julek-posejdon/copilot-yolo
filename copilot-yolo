@@ -10,7 +10,7 @@ HOST_PWD="$(pwd)"
 # Run the container
 # Parse options
 ALLOW_ALL_URLS=0
-MODEL="gpt-4.1"
+MODEL="claude-sonnet-4.5"
 SKIP_BACKUP=0
 ALLOW_GIT=0
 GIT_PRESENT=0
