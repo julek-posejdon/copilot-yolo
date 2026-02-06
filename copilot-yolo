@@ -77,9 +77,24 @@ if [[ $# -ne 0 ]]; then
   exit 1
 fi
 
-# Detect if .git directory exists
+# Detect if .git directory exists or if it's a worktree file
+GIT_WORKTREE_SOURCE=""
 if [[ -d "$HOST_PWD/.git" ]]; then
   GIT_PRESENT=1
+elif [[ -f "$HOST_PWD/.git" ]]; then
+  # This is a worktree, .git is a file pointing to the real git directory
+  GIT_PRESENT=1
+  # Extract the gitdir path from the .git file
+  GIT_WORKTREE_SOURCE=$(grep '^gitdir:' "$HOST_PWD/.git" | cut -d' ' -f2-)
+  if [[ -n "$GIT_WORKTREE_SOURCE" ]]; then
+    # Convert to absolute path if relative
+    if [[ "$GIT_WORKTREE_SOURCE" != /* ]]; then
+      GIT_WORKTREE_SOURCE="$HOST_PWD/$GIT_WORKTREE_SOURCE"
+    fi
+    # Resolve to the main .git directory (go up from .git/worktrees/<name>)
+    # Worktrees are stored in .git/worktrees/<name>, so we need to go up 2 levels
+    GIT_MAIN_DIR="$(dirname "$(dirname "$GIT_WORKTREE_SOURCE")")"
+  fi
 fi
 
 # If .git is present and not allowing git, skip backup
@@ -134,6 +149,10 @@ DOCKER_VOLUMES=(
 # If .git is present and not allowing git, mount .git as read-only
 if [[ $GIT_PRESENT -eq 1 && $ALLOW_GIT -eq 0 ]]; then
   DOCKER_VOLUMES+=(-v "$HOST_PWD/.git":"$HOST_PWD/.git":ro)
+  # If this is a worktree, also mount the main .git directory
+  if [[ -n "$GIT_MAIN_DIR" && -d "$GIT_MAIN_DIR" ]]; then
+    DOCKER_VOLUMES+=(-v "$GIT_MAIN_DIR":"$GIT_MAIN_DIR":ro)
+  fi
 fi
 
 # Mount additional directories and collect their absolute paths
@@ -152,6 +171,21 @@ for dir in "${ADDITIONAL_DIRS[@]}"; do
   # If the additional directory has .git and not allowing git, mount .git as read-only
   if [[ -d "$abs_dir/.git" && $ALLOW_GIT -eq 0 ]]; then
     DOCKER_VOLUMES+=(-v "$abs_dir/.git":"$abs_dir/.git":ro)
+  elif [[ -f "$abs_dir/.git" && $ALLOW_GIT -eq 0 ]]; then
+    # This is a worktree
+    DOCKER_VOLUMES+=(-v "$abs_dir/.git":"$abs_dir/.git":ro)
+    # Extract and mount the main .git directory
+    ADD_GIT_WORKTREE_SOURCE=$(grep '^gitdir:' "$abs_dir/.git" | cut -d' ' -f2-)
+    if [[ -n "$ADD_GIT_WORKTREE_SOURCE" ]]; then
+      # Convert to absolute path if relative
+      if [[ "$ADD_GIT_WORKTREE_SOURCE" != /* ]]; then
+        ADD_GIT_WORKTREE_SOURCE="$abs_dir/$ADD_GIT_WORKTREE_SOURCE"
+      fi
+      ADD_GIT_MAIN_DIR="$(dirname "$(dirname "$ADD_GIT_WORKTREE_SOURCE")")"
+      if [[ -d "$ADD_GIT_MAIN_DIR" ]]; then
+        DOCKER_VOLUMES+=(-v "$ADD_GIT_MAIN_DIR":"$ADD_GIT_MAIN_DIR":ro)
+      fi
+    fi
   fi
 done
 
