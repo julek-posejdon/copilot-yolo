@@ -135,6 +135,11 @@ else
 fi
 printf "${YELLOW}[copilot-yolo]${RESET} Launching container...\n"
 
+# Detect if /etc/resolv.conf is a symlink and warn
+if [[ -L /etc/resolv.conf ]]; then
+  echo -e "${YELLOW}[copilot-yolo]${RESET} Warning: /etc/resolv.conf is a symlink. To avoid Docker mount errors, replace it with a real file (e.g. sudo cat /etc/resolv.conf > /tmp/resolv.conf && sudo rm /etc/resolv.conf) && sudo mv /tmp/resolv.conf /etc/resolv.conf."
+fi
+
 # Build docker volume args
 DOCKER_VOLUMES=(
   -v /usr:/usr:ro
@@ -145,6 +150,11 @@ DOCKER_VOLUMES=(
   -v "$HOME/.local:$HOME/.local"
   -v "$HOST_PWD":"$HOST_PWD":rw
 )
+
+# Mount .nvm if it exists
+if [[ -d "$HOME/.nvm" ]]; then
+  DOCKER_VOLUMES+=(-v "$HOME/.nvm:$HOME/.nvm":ro)
+fi
 
 # If .git is present and not allowing git, mount .git as read-only
 if [[ $GIT_PRESENT -eq 1 && $ALLOW_GIT -eq 0 ]]; then
