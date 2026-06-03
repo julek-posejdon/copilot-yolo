@@ -29,7 +29,7 @@ Run with `--help` for details on all options.
 ### Options
 
 - `--enable-network`: Allow copilot to access all URLs
-- `--model MODEL`: Specify the AI model (default: gpt-4.1)
+- `--model MODEL`: Specify the AI model override
 - `--skip-backup`: Skip backup before running copilot
 - `--allow-git`: Allow writing to `.git` directory
 - `--add-dir DIR`: Mount additional directory (can be specified multiple times)
